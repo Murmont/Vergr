@@ -1,0 +1,137 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper: check auth
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    // Max file sizes
+    function isUnder(maxMB) {
+      return request.resource.size < maxMB * 1024 * 1024;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function isVideo() {
+      return request.resource.contentType.matches('video/.*');
+    }
+
+    function isMediaFile() {
+      return isImage() || isVideo() || request.resource.contentType.matches('audio/.*');
+    }
+
+    // ═══════════════════════════════════════════
+    // USER AVATARS & BANNERS
+    // ═══════════════════════════════════════════
+    match /users/{userId}/avatar/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(userId) && isImage() && isUnder(5);
+    }
+
+    match /users/{userId}/banner/{fileName} {
+      allow read: if true;
+      allow write: if isOwner(userId) && isImage() && isUnder(10);
+    }
+
+    // ═══════════════════════════════════════════
+    // POST MEDIA
+    // ═══════════════════════════════════════════
+    match /posts/{postId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isMediaFile() && isUnder(50); // 50MB for videos
+    }
+
+    // ═══════════════════════════════════════════
+    // STORY MEDIA
+    // ═══════════════════════════════════════════
+    match /stories/{storyId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isMediaFile() && isUnder(30);
+    }
+
+    // ═══════════════════════════════════════════
+    // SQUAD MEDIA
+    // ═══════════════════════════════════════════
+    match /squads/{squadId}/avatar/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isImage() && isUnder(5);
+    }
+
+    match /squads/{squadId}/banner/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isImage() && isUnder(10);
+    }
+
+    match /squads/{squadId}/media/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isMediaFile() && isUnder(50);
+    }
+
+    match /squads/{squadId}/chat/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isMediaFile() && isUnder(25);
+    }
+
+    // ═══════════════════════════════════════════
+    // DIRECT MESSAGE MEDIA
+    // ═══════════════════════════════════════════
+    match /conversations/{convoId}/{fileName} {
+      allow read: if isAuth();
+      allow write: if isAuth() && isMediaFile() && isUnder(25);
+    }
+
+    // ═══════════════════════════════════════════
+    // PRODUCT IMAGES (admin only upload, public read)
+    // ═══════════════════════════════════════════
+    match /products/{productId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isImage() && isUnder(10);
+      // Note: admin-only restriction handled at Firestore level
+    }
+
+    // ═══════════════════════════════════════════
+    // STREAM THUMBNAILS
+    // ═══════════════════════════════════════════
+    match /streams/{streamId}/thumbnail/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isImage() && isUnder(5);
+    }
+
+    // ═══════════════════════════════════════════
+    // TOURNAMENT MEDIA
+    // ═══════════════════════════════════════════
+    match /tournaments/{tourneyId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isImage() && isUnder(10);
+    }
+
+    // ═══════════════════════════════════════════
+    // NEWS IMAGES (Cloud Functions / admin)
+    // ═══════════════════════════════════════════
+    match /news/{articleId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isImage() && isUnder(10);
+    }
+
+    // ═══════════════════════════════════════════
+    // AD CREATIVES
+    // ═══════════════════════════════════════════
+    match /ads/{adId}/{fileName} {
+      allow read: if true;
+      allow write: if isAuth() && isMediaFile() && isUnder(15);
+    }
+
+    // Deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

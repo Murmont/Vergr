@@ -3,3 +3,5 @@ dist
 *.log
 .firebase
 .DS_Store
+functions/lib
+functions/node_modules

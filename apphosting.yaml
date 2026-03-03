@@ -1,12 +1,10 @@
 # Firebase App Hosting configuration for VERGR
-# This tells Firebase how to build and serve the Vite React app
-
 runConfig:
   runtime: nodejs20
 
 env:
   - variable: VITE_FIREBASE_API_KEY
-    secret: FIREBASE_API_KEY
+    value: AIzaSyCuwlEMPFzhmXx_FqdWiYWlshuRT_EIkoI
   - variable: VITE_FIREBASE_AUTH_DOMAIN
     value: vergr-44494.firebaseapp.com
   - variable: VITE_FIREBASE_PROJECT_ID
@@ -14,6 +12,8 @@ env:
   - variable: VITE_FIREBASE_STORAGE_BUCKET
     value: vergr-44494.firebasestorage.app
   - variable: VITE_FIREBASE_MESSAGING_SENDER_ID
-    secret: FIREBASE_MESSAGING_SENDER_ID
+    value: "674096624319"
   - variable: VITE_FIREBASE_APP_ID
-    secret: FIREBASE_APP_ID
+    value: 1:674096624319:web:a01744f81795f15b354c0a
+  - variable: VITE_FIREBASE_DATABASE_ID
+    value: vgrdb

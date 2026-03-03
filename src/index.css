@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; }
+  body { @apply font-dmsans text-text-primary bg-bg-dark antialiased; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply w-full h-[56px] rounded-full bg-brand-gradient text-white font-bold text-lg
+      hover:brightness-110 active:scale-[0.98] transition-all duration-200
+      shadow-[0_0_20px_rgba(77,255,212,0.15)] flex items-center justify-center
+      font-syne tracking-wide;
+  }
+  .btn-secondary {
+    @apply w-full h-[56px] rounded-full border border-border-accent bg-surface-2
+      text-text-primary font-semibold text-base hover:bg-surface-3
+      active:scale-[0.98] transition-all duration-200 flex items-center justify-center;
+  }
+  .btn-ghost {
+    @apply px-4 py-2 rounded-full text-text-secondary hover:text-text-primary
+      hover:bg-surface-2 transition-all duration-200;
+  }
+  .input-field {
+    @apply w-full bg-surface-2 border border-border-accent rounded-custom
+      py-4 px-4 text-text-primary placeholder:text-text-muted
+      focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan
+      focus:outline-none transition-all duration-300 h-[56px] text-base font-dmsans;
+  }
+  .input-with-icon { @apply input-field pl-12; }
+  .card { @apply bg-surface-1 border border-border-accent rounded-2xl p-4; }
+  .card-hover { @apply card hover:border-brand-cyan/30 hover:shadow-[0_0_20px_rgba(77,255,212,0.05)] transition-all duration-300; }
+  .badge { @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold; }
+  .badge-cyan { @apply badge bg-brand-cyan/10 text-brand-cyan; }
+  .badge-gold { @apply badge bg-brand-gold/10 text-brand-gold; }
+  .badge-ember { @apply badge bg-brand-ember/10 text-brand-ember; }
+  .screen-container { @apply relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-bg-dark; }
+}
+
+@layer utilities {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+}

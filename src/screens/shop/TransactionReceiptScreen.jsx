@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/Icon';
 export default function TransactionReceiptScreen() {
   const navigate = useNavigate();
-  const tx = {id:'TXN-2026-0302-001',type:'Purchase',item:'500 Coin Pack',amount:'R119.00',coins:'+550',method:'Visa •••• 4242',date:'Mar 2, 2026 at 14:32',status:'Completed'};
+  const tx = {id:'TXN-2026-0302-001',type:'Purchase',item:'500 Coin Pack',amount:'€4.49',coins:'+550',method:'Visa •••• 4242',date:'Mar 2, 2026 at 14:32',status:'Completed'};
   return (
     <div className="screen-container min-h-screen flex flex-col">
       <header className="flex items-center gap-3 px-5 pt-12 pb-4"><button onClick={()=>navigate(-1)} className="text-white/80"><Icon name="arrow-left" size={24}/></button><h1 className="text-white font-syne font-bold text-lg">Receipt</h1></header>

@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/Icon';
 export default function InventoryScreen() {
   const navigate = useNavigate();
-  const products = [{id:1,name:'Velocity X Mouse',price:'R899',stock:45,status:'active'},{id:2,name:'VERGR Hoodie',price:'R599',stock:12,status:'active'},{id:3,name:'RGB Mousepad XL',price:'R349',stock:0,status:'out'}];
+  const products = [{id:1,name:'Velocity X Mouse',price:'€44.99',stock:45,status:'active'},{id:2,name:'VERGR Hoodie',price:'€29.99',stock:12,status:'active'},{id:3,name:'RGB Mousepad XL',price:'€17.49',stock:0,status:'out'}];
   return (
     <div className="screen-container min-h-screen flex flex-col">
       <header className="flex items-center gap-3 px-5 pt-12 pb-4"><button onClick={()=>navigate(-1)} className="text-white/80"><Icon name="arrow-left" size={24}/></button><h1 className="text-white font-syne font-bold text-lg flex-1">Inventory</h1><button onClick={()=>navigate('/brand/add-product')} className="text-primary"><Icon name="plus" size={22}/></button></header>

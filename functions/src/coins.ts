@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-const db = admin.firestore();
+import { db } from "./db";
 
 /**
  * Send a tip from one user to another.
@@ -156,7 +156,7 @@ export const purchaseCoins = functions.https.onCall(async (data, context) => {
   // const stripe = new Stripe(functions.config().stripe.secret);
   // const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
   // if (intent.status !== 'succeeded') throw error;
-  // if (intent.amount !== pkg.priceZAR * 100) throw error;
+  // if (intent.amount !== pkg.priceEUR * 100) throw error;
 
   await db.runTransaction(async (tx) => {
     const walletRef = db.collection("wallets").doc(userId);
@@ -186,7 +186,7 @@ export const purchaseCoins = functions.https.onCall(async (data, context) => {
       balance: currentBalance + totalCoins,
       packageId,
       packageName: pkg.name,
-      priceZAR: pkg.priceZAR,
+      priceEUR: pkg.priceEUR,
       baseCoins: pkg.coins,
       bonusCoins,
       paymentIntentId,

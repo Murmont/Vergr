@@ -11,7 +11,7 @@ export default function RequestPayoutScreen() {
         <div className="bg-surface rounded-xl p-4 border border-surface-border mb-6 text-center">
           <p className="text-text-secondary text-xs mb-1">Available Balance</p>
           <p className="text-primary text-3xl font-bold">4,250 <span className="text-lg">coins</span></p>
-          <p className="text-text-secondary text-xs mt-1">≈ R977.50</p>
+          <p className="text-text-secondary text-xs mt-1">≈ €48.88</p>
         </div>
         <label className="block mb-4"><span className="text-text-secondary text-xs font-bold uppercase mb-2 block">Payout Amount (coins)</span>
           <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Min 500" className="w-full bg-surface border border-surface-border rounded-xl px-4 py-4 text-white text-xl font-bold outline-none focus:border-primary"/></label>

@@ -142,7 +142,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "category", "order": "ASCENDING" },
-        { "fieldPath": "priceZAR", "order": "ASCENDING" }
+        { "fieldPath": "priceEUR", "order": "ASCENDING" }
       ]
     },
     {

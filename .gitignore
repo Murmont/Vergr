@@ -5,3 +5,4 @@ dist
 .DS_Store
 functions/lib
 functions/node_modules
+serviceAccountKey.json

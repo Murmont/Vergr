@@ -1,7 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 
-const db = admin.firestore();
+import { db } from "./db";
 
 /**
  * Create an order from the user's cart.
@@ -26,7 +26,7 @@ export const createOrder = functions.https.onCall(async (data, context) => {
   }
 
   return db.runTransaction(async (tx) => {
-    let subtotalZAR = 0;
+    let subtotalEUR = 0;
     const orderItems: any[] = [];
 
     // Validate each cart item against product stock
@@ -44,15 +44,15 @@ export const createOrder = functions.https.onCall(async (data, context) => {
         throw new functions.https.HttpsError("failed-precondition", `Insufficient stock for ${p.name}`);
       }
 
-      const itemTotal = p.priceZAR * cartItem.quantity;
-      subtotalZAR += itemTotal;
+      const itemTotal = p.priceEUR * cartItem.quantity;
+      subtotalEUR += itemTotal;
 
       orderItems.push({
         productId: cartItem.productId,
         name: p.name,
-        priceZAR: p.priceZAR,
+        priceEUR: p.priceEUR,
         quantity: cartItem.quantity,
-        totalZAR: itemTotal,
+        totalEUR: itemTotal,
         image: p.images?.[0] || null,
       });
 
@@ -64,9 +64,9 @@ export const createOrder = functions.https.onCall(async (data, context) => {
     }
 
     // Calculate totals
-    const shippingZAR = subtotalZAR >= 500 ? 0 : 99; // Free shipping over R500
+    const shippingEUR = subtotalEUR >= 500 ? 0 : 4.99; // Free shipping over €25
     const vatRate = 0.15; // South Africa VAT
-    const vatZAR = Math.round(subtotalZAR * vatRate * 100) / 100;
+    const vatEUR = Math.round(subtotalEUR * vatRate * 100) / 100;
 
     // Coin discount (if applicable)
     let coinDiscount = 0;
@@ -75,8 +75,8 @@ export const createOrder = functions.https.onCall(async (data, context) => {
       const wallet = await tx.get(walletRef);
       const balance = wallet.data()?.balance || 0;
 
-      const maxCoinsUsable = Math.min(coinAmount, balance, subtotalZAR * 10); // 10 coins = R1
-      coinDiscount = maxCoinsUsable / 10; // Convert to ZAR
+      const maxCoinsUsable = Math.min(coinAmount, balance, subtotalEUR * 10); // 10 coins = R1
+      coinDiscount = maxCoinsUsable / 10; // Convert to EUR
 
       tx.update(walletRef, {
         balance: admin.firestore.FieldValue.increment(-maxCoinsUsable),
@@ -85,7 +85,7 @@ export const createOrder = functions.https.onCall(async (data, context) => {
       });
     }
 
-    const totalZAR = subtotalZAR + shippingZAR + vatZAR - coinDiscount;
+    const totalEUR = subtotalEUR + shippingEUR + vatEUR - coinDiscount;
 
     // Create order
     const orderRef = db.collection("orders").doc();
@@ -94,11 +94,11 @@ export const createOrder = functions.https.onCall(async (data, context) => {
       status: "pending_payment", // pending_payment | paid | processing | shipped | delivered | cancelled | refunded
       items: orderItems,
       itemCount: orderItems.length,
-      subtotalZAR,
-      shippingZAR,
-      vatZAR,
+      subtotalEUR,
+      shippingEUR,
+      vatEUR,
       coinDiscount,
-      totalZAR: Math.max(0, totalZAR),
+      totalEUR: Math.max(0, totalEUR),
       shippingAddress,
       paymentMethod,
       trackingNumber: null,
@@ -114,7 +114,7 @@ export const createOrder = functions.https.onCall(async (data, context) => {
 
     return {
       orderId: orderRef.id,
-      totalZAR: Math.max(0, totalZAR),
+      totalEUR: Math.max(0, totalEUR),
       itemCount: orderItems.length,
     };
   });
@@ -215,24 +215,24 @@ export const requestPayout = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("failed-precondition", `Minimum payout is ${minPayout} coins`);
   }
 
-  // Coin to ZAR conversion: 100 coins = R10
+  // Coin to EUR conversion: 100 coins = R10
   const payoutCoins = data.amount || balance;
-  const payoutZAR = payoutCoins / 10;
+  const payoutEUR = payoutCoins / 10;
 
   // TODO: Create Stripe Connect transfer
   // const transfer = await stripe.transfers.create({
-  //   amount: Math.floor(payoutZAR * 100), // cents
-  //   currency: 'zar',
+  //   amount: Math.floor(payoutEUR * 100), // cents
+  //   currency: 'eur',
   //   destination: creator.data()!.stripeConnectId,
   // });
 
   // Record payout request
   const payout = await db.collection("creators").doc(userId).collection("payouts").add({
     amount: payoutCoins,
-    amountZAR: payoutZAR,
+    amountEUR: payoutEUR,
     status: "pending", // pending | processing | completed | failed
     requestedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  return { payoutId: payout.id, amountZAR: payoutZAR };
+  return { payoutId: payout.id, amountEUR: payoutEUR };
 });

@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/Icon';
 export default function SalesAnalyticsScreen() {
   const navigate = useNavigate();
-  const stats = [{label:'Total Revenue',value:'R24,500',change:'+18%'},{label:'Orders',value:'156',change:'+12%'},{label:'Avg Order',value:'R157',change:'+3%'},{label:'Return Rate',value:'2.1%',change:'-0.5%'}];
-  const topProducts = [{name:'Velocity X Mouse',sales:68,revenue:'R61,132'},{name:'VERGR Hoodie',sales:52,revenue:'R31,148'},{name:'RGB Mousepad XL',sales:36,revenue:'R12,564'}];
+  const stats = [{label:'Total Revenue',value:'€1,225',change:'+18%'},{label:'Orders',value:'156',change:'+12%'},{label:'Avg Order',value:'€7.85',change:'+3%'},{label:'Return Rate',value:'2.1%',change:'-0.5%'}];
+  const topProducts = [{name:'Velocity X Mouse',sales:68,revenue:'€3,057'},{name:'VERGR Hoodie',sales:52,revenue:'€1,557'},{name:'RGB Mousepad XL',sales:36,revenue:'€628'}];
   return (
     <div className="screen-container min-h-screen flex flex-col">
       <header className="flex items-center gap-3 px-5 pt-12 pb-4"><button onClick={()=>navigate(-1)} className="text-white/80"><Icon name="arrow-left" size={24}/></button><h1 className="text-white font-syne font-bold text-lg">Sales Analytics</h1></header>

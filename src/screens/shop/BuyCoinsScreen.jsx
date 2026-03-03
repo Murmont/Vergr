@@ -5,7 +5,7 @@ export default function BuyCoinsScreen() {
   const navigate = useNavigate();
   const [custom, setCustom] = useState('');
   const [selected, setSelected] = useState(null);
-  const packs = [{id:1,coins:100,price:'R27',bonus:null},{id:2,coins:500,price:'R119',bonus:'+10%'},{id:3,coins:1200,price:'R549',bonus:'+20%'},{id:4,coins:5000,price:'R1999',bonus:'+30%'}];
+  const packs = [{id:1,coins:100,price:'€0.99',bonus:null},{id:2,coins:500,price:'€4.49',bonus:'+10%'},{id:3,coins:1200,price:'€8.99',bonus:'+20%'},{id:4,coins:5000,price:'€19.99',bonus:'+30%'}];
   return (
     <div className="screen-container min-h-screen flex flex-col">
       <header className="flex items-center gap-3 px-5 pt-12 pb-4"><button onClick={()=>navigate(-1)} className="text-white/80"><Icon name="arrow-left" size={24}/></button><h1 className="text-white font-syne font-bold text-lg">Buy Coins</h1></header>

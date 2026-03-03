@@ -35,9 +35,6 @@ export function AuthProvider({ children }) {
     return signInWithPopup(auth, googleProvider);
   }, []);
 
-    return signInWithPopup(auth);
-  }, []);
-
   const logout = useCallback(async () => {
     return signOut(auth);
   }, []);
@@ -48,6 +45,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     currentUser, loading,
+    login, signUp, loginWithGoogle, logout, resetPassword,
   };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

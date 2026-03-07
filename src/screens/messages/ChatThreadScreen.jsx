@@ -1,215 +1,157 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import UserAvatar from '../../components/UserAvatar';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../../firebase/config';
+import { gf } from '../../utils/giphyConfig';
+import { startVoiceRecording, uploadMediaFile, getYouTubeID } from '../../utils/mediaHelpers';
+import { Grid } from '@giphy/react-components';
 import Icon from '../../components/Icon';
-
-const DEMO_CHATS = {
-  c1: {
-    isGroup: false, name: 'Alex Rivera', online: true, tier: 'Gold',
-    messages: [
-      { id:'m1', sender:'them', senderName:'Alex Rivera', text:'Hey! Are you joining the tournament tonight?', time:'9:15 AM' },
-      { id:'m2', sender:'me', text:"Yeah I'm in! What time does it start?", time:'9:17 AM' },
-      { id:'m3', sender:'them', senderName:'Alex Rivera', text:'8PM EST. Squad is already locked in 🔥', time:'9:18 AM' },
-      { id:'m4', sender:'them', senderName:'Alex Rivera', text:'Also check out my new stream setup', time:'9:18 AM', image:'https://images.unsplash.com/photo-1593305841991-05c297ba4575?w=400' },
-      { id:'m5', sender:'me', text:'That setup is INSANE 🔥🔥', time:'9:20 AM' },
-    ],
-  },
-  c2: {
-    isGroup: true, name: 'Vergr Core Team', members: [
-      { username:'Maya', tier:'Diamond', color:'#51fbd9' },
-      { username:'Jake', tier:'Silver', color:'#7B6FFF' },
-      { username:'Priya', tier:'Gold', color:'#FFD700' },
-      { username:'You', tier:'Gold', color:'#C87FFF' },
-    ],
-    messages: [
-      { id:'g1', sender:'Maya', senderName:'Maya', color:'#51fbd9', text:'Has everyone tested the new build?', time:'10:05 AM' },
-      { id:'g2', sender:'Jake', senderName:'Jake', color:'#7B6FFF', text:'Running through it now. Feed looks clean.', time:'10:08 AM' },
-      { id:'g3', sender:'me', text:'Shop screen has a layout bug on small phones', time:'10:10 AM' },
-      { id:'g4', sender:'Priya', senderName:'Priya', color:'#FFD700', text:'I see it too. Opening a ticket.', time:'10:11 AM' },
-      { id:'g5', sender:'Maya', senderName:'Maya', color:'#51fbd9', text:'The new update looks 🔥', time:'10:15 AM' },
-    ],
-  },
-  c4: {
-    isGroup: true, name: 'Apex Predators Squad', members: [
-      { username:'NeonBlade', tier:'Gold', color:'#51fbd9' },
-      { username:'PixelQueen', tier:'Diamond', color:'#C87FFF' },
-      { username:'FragMaster', tier:'Silver', color:'#7B6FFF' },
-      { username:'You', tier:'Gold', color:'#FFD700' },
-    ],
-    messages: [
-      { id:'s1', sender:'NeonBlade', senderName:'NeonBlade', color:'#51fbd9', text:'Tournament starts at 8PM EST', time:'Yesterday' },
-      { id:'s2', sender:'PixelQueen', senderName:'PixelQueen', color:'#C87FFF', text:'I warmed up in ranked. Feeling good 💪', time:'Yesterday' },
-      { id:'s3', sender:'me', text:"Let's run some practice rounds first", time:'Yesterday' },
-      { id:'s4', sender:'FragMaster', senderName:'FragMaster', color:'#7B6FFF', text:'Agreed. Meet in Discord VC at 7:30?', time:'Yesterday' },
-    ],
-  },
-};
+import UserAvatar from '../../components/UserAvatar';
 
 export default function ChatThreadScreen() {
   const { chatId } = useParams();
-  const chat = DEMO_CHATS[chatId] || DEMO_CHATS.c1;
-  const [messages, setMessages] = useState(chat.messages);
-  const [input, setInput] = useState('');
-  const [showAttach, setShowAttach] = useState(false);
-  const [showCoins, setShowCoins] = useState(false);
-  const bottomRef = useRef(null);
   const navigate = useNavigate();
+  const scrollRef = useRef();
+  
+  const [messages, setMessages] = useState([]);
+  const [chatInfo, setChatInfo] = useState(null);
+  const [input, setInput] = useState('');
+  const [showGiphy, setShowGiphy] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recorder, setRecorder] = useState(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => {
+    const q = query(collection(db, 'conversations', chatId, 'messages'), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, (snap) => {
+      setMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    });
+    onSnapshot(doc(db, 'conversations', chatId), (d) => setChatInfo(d.data()));
+    return () => unsub();
+  }, [chatId]);
 
-  const sendMessage = () => {
-    if (!input.trim()) return;
-    setMessages(prev => [...prev, {
-      id: `m${Date.now()}`, sender: 'me', text: input.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
-    setInput('');
+  const sendMsg = async (payload) => {
+    await addDoc(collection(db, 'conversations', chatId, 'messages'), {
+      senderId: auth.currentUser.uid,
+      createdAt: serverTimestamp(),
+      ...payload
+    });
+    await updateDoc(doc(db, 'conversations', chatId), {
+      lastMessageText: payload.text || `Sent a ${payload.type}`,
+      lastMessageAt: serverTimestamp()
+    });
   };
 
-  const sendCoins = (amount) => {
-    setMessages(prev => [...prev, {
-      id: `m${Date.now()}`, sender: 'me', type: 'coins', amount,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
-    setShowCoins(false);
+  const handleVoiceStop = async (rec) => {
+    if (!rec) return;
+    rec.stop();
+    rec.ondataavailable = async (e) => {
+      const url = await uploadMediaFile(e.data, 'voice_notes');
+      sendMsg({ type: 'voice', contentUrl: url });
+    };
+    setIsRecording(false);
   };
+
+  const renderMessageContent = (m) => {
+    const ytId = m.type === 'text' ? getYouTubeID(m.text) : null;
+    if (ytId) {
+      return (
+        <div className="flex flex-col">
+          <p className="px-4 py-2.5 text-sm">{m.text}</p>
+          <iframe src={`https://www.youtube.com/embed/${ytId}`} className="w-full aspect-video" allowFullScreen title="YT" />
+        </div>
+      );
+    }
+    switch (m.type) {
+      case 'giphy': return <img src={m.contentUrl} className="w-full" alt="giphy" />;
+      case 'image': return <img src={m.contentUrl} className="w-full max-h-80 object-cover" />;
+      case 'video': return <video controls className="w-full max-h-80 bg-black"><source src={m.contentUrl} /></video>;
+      case 'voice': return (
+        <div className="flex items-center gap-3 p-3 min-w-[200px]">
+          <Icon name="play_circle" size={32} />
+          <audio src={m.contentUrl} controls className="hidden" id={`audio-${m.id}`} />
+          <div className="flex-1 h-1 bg-black/20 rounded-full" />
+          <span className="text-[10px] font-bold opacity-70 uppercase tracking-widest">Voice</span>
+        </div>
+      );
+      default: return <p className="px-4 py-2.5 text-sm leading-relaxed">{m.text}</p>;
+    }
+  };
+
+  const otherUserId = chatInfo?.participants?.find(id => id !== auth.currentUser?.uid);
+  const otherUser = chatInfo?.metadata?.[otherUserId];
 
   return (
-    <div className="screen-container min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-bg-dark/95 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => navigate('/messages')} className="w-9 h-9 rounded-full bg-surface-2/80 flex items-center justify-center">
-              <Icon name="arrow_back" size={20} />
-            </button>
-            <button onClick={() => navigate(`/messages/${chatId}/settings`)} className="flex items-center gap-3">
-              {chat.isGroup ? (
-                <div className="relative w-10 h-10">
-                  <div className="absolute top-0 left-0 w-7 h-7 rounded-full bg-surface-border flex items-center justify-center text-xs font-bold text-primary border-2 border-bg-dark z-10">{chat.members.length}</div>
-                  <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-surface flex items-center justify-center border-2 border-bg-dark"><Icon name="groups" size={14} className="text-text-secondary" /></div>
-                </div>
-              ) : (
-                <div className="relative">
-                  <UserAvatar username={chat.name} tier={chat.tier} size={40} />
-                  {chat.online && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-bg-dark rounded-full" />}
-                </div>
-              )}
-              <div>
-                <h1 className="font-syne text-sm font-bold text-white">{chat.name}</h1>
-                <span className="text-[10px] text-text-secondary">
-                  {chat.isGroup ? `${chat.members.length} members` : chat.online ? 'Online' : 'Offline'}
-                </span>
-              </div>
-            </button>
-          </div>
-          <div className="flex items-center gap-1">
-            {!chat.isGroup && <button className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-2"><Icon name="videocam" size={22} className="text-text-secondary" /></button>}
-            <button onClick={() => navigate(`/messages/${chatId}/settings`)} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-surface-2"><Icon name="more_vert" size={22} className="text-text-secondary" /></button>
-          </div>
+    <div className="screen-container h-screen flex flex-col bg-bg-dark overflow-hidden">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-border-accent bg-bg-dark/80 backdrop-blur-md">
+        <button onClick={() => navigate(-1)}><Icon name="arrow_back" size={24} /></button>
+        <div className="flex-1 min-w-0" onClick={() => navigate(`/messages/${chatId}/settings`)}>
+          <h2 className="text-white font-bold text-sm truncate">{chatInfo?.isGroup ? chatInfo.groupName : otherUser?.name || 'Loading...'}</h2>
+          <p className="text-[10px] text-brand-cyan font-bold uppercase tracking-tighter">Active Now</p>
         </div>
+        <button onClick={() => navigate(`/messages/${chatId}/settings`)}><Icon name="info" size={22} /></button>
       </header>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map((msg, idx) => {
-          const isMe = msg.sender === 'me';
-          const showSender = chat.isGroup && !isMe && (idx === 0 || messages[idx-1].sender !== msg.sender);
-
-          if (msg.type === 'coins') {
-            return (
-              <div key={msg.id} className="flex justify-center">
-                <div className="bg-primary/10 border border-primary/20 rounded-2xl px-4 py-2 text-center">
-                  <p className="text-primary text-sm font-bold flex items-center gap-1 justify-center">
-                    <Icon name="monetization_on" size={16} /> Sent {msg.amount} coins
-                  </p>
-                  <p className="text-text-secondary text-[10px]">{msg.time}</p>
-                </div>
-              </div>
-            );
-          }
-
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
+        {messages.map((m) => {
+          const isMe = m.senderId === auth.currentUser.uid;
           return (
-            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%]`}>
-                {showSender && (
-                  <p className="text-xs font-bold mb-1 ml-1" style={{ color: msg.color || '#51fbd9' }}>
-                    {msg.senderName}
-                  </p>
-                )}
-                {msg.image && (
-                  <div className="mb-1 rounded-2xl overflow-hidden border border-surface-border/30">
-                    <img src={msg.image} alt="" className="w-full max-w-[280px] object-cover rounded-2xl" />
-                  </div>
-                )}
-                {msg.text && (
-                  <div className={`px-4 py-2.5 rounded-2xl ${
-                    isMe
-                      ? 'bg-gradient-to-r from-primary/80 to-purple-500/80 text-white rounded-br-md'
-                      : 'bg-surface border border-surface-border text-white rounded-bl-md'
-                  }`}>
-                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                  </div>
-                )}
-                <p className={`text-[10px] mt-1 text-text-secondary ${isMe ? 'text-right' : ''}`}>
-                  {msg.time}{isMe && <span className="ml-1 text-primary">✓✓</span>}
-                </p>
+            <div key={m.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] rounded-2xl overflow-hidden ${isMe ? 'bg-brand-cyan text-bg-dark font-medium shadow-lg shadow-brand-cyan/10' : 'bg-surface-2 text-white border border-white/5'}`}>
+                {renderMessageContent(m)}
               </div>
             </div>
           );
         })}
-        <div ref={bottomRef} />
-      </div>
+        <div ref={scrollRef} />
+      </main>
 
-      {/* Coin send overlay */}
-      {showCoins && (
-        <div className="border-t border-surface-border bg-surface p-4">
-          <p className="text-text-secondary text-xs font-bold uppercase mb-3">Send Coins</p>
-          <div className="flex gap-2">
-            {[10, 50, 100, 500].map(amt => (
-              <button key={amt} onClick={() => sendCoins(amt)} className="flex-1 py-3 bg-primary/10 border border-primary/20 rounded-xl text-center">
-                <Icon name="monetization_on" size={16} className="text-primary mx-auto" />
-                <span className="text-primary text-sm font-bold block">{amt}</span>
-              </button>
-            ))}
-          </div>
+      {showGiphy && (
+        <div className="h-80 bg-surface-1 border-t border-border-accent overflow-y-auto">
+          <Grid width={window.innerWidth} columns={3} fetchGifs={(offset) => gf.trending({ offset, limit: 10 })} onGifClick={(gif, e) => {
+            e.preventDefault(); sendMsg({ type: 'giphy', contentUrl: gif.images.fixed_height.url }); setShowGiphy(false);
+          }} gutter={4} />
         </div>
       )}
 
-      {/* Attachment overlay */}
-      {showAttach && (
-        <div className="border-t border-surface-border bg-surface p-4">
-          <div className="flex gap-4 justify-center">
-            {[{icon:'photo_camera', label:'Camera', color:'text-red-400'},{icon:'image', label:'Gallery', color:'text-green-400'},{icon:'attach_file', label:'File', color:'text-blue-400'},{icon:'mic', label:'Voice', color:'text-purple-400'}].map(a => (
-              <button key={a.label} onClick={() => setShowAttach(false)} className="flex flex-col items-center gap-1">
-                <div className="w-12 h-12 rounded-full bg-surface-border flex items-center justify-center"><Icon name={a.icon} size={22} className={a.color} /></div>
-                <span className="text-text-secondary text-[10px]">{a.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="sticky bottom-0 bg-bg-dark/95 backdrop-blur-xl border-t border-surface-border p-3 safe-bottom">
+      <footer className="p-4 bg-bg-dark border-t border-border-accent">
         <div className="flex items-center gap-2">
-          <button onClick={() => { setShowAttach(!showAttach); setShowCoins(false); }} className="w-10 h-10 rounded-full bg-surface flex items-center justify-center shrink-0">
-            <Icon name={showAttach ? 'close' : 'add'} size={22} className="text-text-secondary" />
-          </button>
-          <div className="flex-1 relative">
-            <input type="text" placeholder="Type a message..." value={input} onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendMessage()}
-              className="w-full bg-surface border border-surface-border rounded-full py-2.5 px-4 pr-10 text-sm text-white placeholder:text-text-secondary focus:border-primary focus:outline-none" />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary"><Icon name="mood" size={20} /></button>
-          </div>
-          <button onClick={() => { setShowCoins(!showCoins); setShowAttach(false); }} className="w-10 h-10 rounded-full bg-surface flex items-center justify-center shrink-0">
-            <Icon name="monetization_on" size={20} className={showCoins ? 'text-primary' : 'text-text-secondary'} />
-          </button>
-          <button onClick={sendMessage} className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-all ${input.trim() ? 'bg-primary text-black' : 'bg-surface text-text-secondary'}`}>
-            <Icon name="send" size={20} />
-          </button>
+          {!isRecording ? (
+            <>
+              <button onClick={() => setShowGiphy(!showGiphy)}><Icon name="gif_box" size={28} className={showGiphy ? 'text-brand-cyan' : 'text-text-muted'} /></button>
+              <div className="flex-1 flex items-center bg-surface-1 rounded-full px-4 border border-border-accent/50 focus-within:border-brand-cyan">
+                <input value={input} onChange={e => setInput(e.target.value)} placeholder="Type a message..." className="flex-1 bg-transparent py-2.5 text-sm text-white outline-none" />
+                
+                {/* Image Upload */}
+                <input type="file" id="img-up" accept="image/*" hidden onChange={async e => {
+                   if (!e.target.files[0]) return;
+                   const url = await uploadMediaFile(e.target.files[0], 'chat_images');
+                   sendMsg({ type: 'image', contentUrl: url });
+                }} />
+                <label htmlFor="img-up" className="cursor-pointer"><Icon name="image" size={20} className="text-text-muted ml-2" /></label>
+                
+                {/* Video Upload */}
+                <input type="file" id="vid-up" accept="video/*" hidden onChange={async e => {
+                   if (!e.target.files[0]) return;
+                   const url = await uploadMediaFile(e.target.files[0], 'chat_videos');
+                   sendMsg({ type: 'video', contentUrl: url });
+                }} />
+                <label htmlFor="vid-up" className="cursor-pointer"><Icon name="videocam" size={20} className="text-text-muted ml-2" /></label>
+              </div>
+              {input.trim() ? (
+                <button onClick={() => { sendMsg({ text: input, type: 'text' }); setInput(''); }} className="w-10 h-10 rounded-full bg-brand-cyan text-bg-dark flex items-center justify-center"><Icon name="send" size={20} /></button>
+              ) : (
+                <button onMouseDown={async () => { setIsRecording(true); const r = await startVoiceRecording(); setRecorder(r); }} onMouseUp={() => handleVoiceStop(recorder)} className="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-white"><Icon name="mic" size={20} /></button>
+              )}
+            </>
+          ) : (
+            <div className="flex-1 flex items-center gap-4 bg-red-500/10 rounded-full px-4 py-2 border border-red-500/30">
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
+              <span className="text-red-500 text-sm font-bold flex-1">Recording... Release to send</span>
+            </div>
+          )}
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

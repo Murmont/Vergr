@@ -5,13 +5,13 @@ import { getStorage } from 'firebase/storage';
 import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'vergr-44494',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+  apiKey: "AIzaSyCuwlEMPFzhmXx_FqdWiYWlshuRT_EIkoI",
+  authDomain: "vergr-44494.firebaseapp.com",
+  projectId: "vergr-44494",
+  storageBucket: "vergr-44494.firebasestorage.app",
+  messagingSenderId: "674096624319",
+  appId: "1:674096624319:web:a01744f81795f15b354c0a",
+  measurementId: "G-674096624319"
 };
 
 // Check if Firebase is configured (has a real API key)

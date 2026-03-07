@@ -126,7 +126,20 @@ service cloud.firestore {
         allow delete: if isOwner(userId);
       }
     }
+// ═══════════════════════════════════════════
+// POLLS
+// ═══════════════════════════════════════════
 
+match /polls/{pollId} {
+  allow read: if true;
+  allow create: if isAuth(); // Allow users to create polls if you have a "Create" screen
+
+  // Votes subcollection
+  match /votes/{userId} {
+    allow read: if true;
+    allow create: if isOwner(userId); // Only the user can cast their own vote
+  }
+}
     // ═══════════════════════════════════════════
     // STORIES
     // ═══════════════════════════════════════════

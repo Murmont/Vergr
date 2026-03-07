@@ -1,86 +1,69 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db, auth } from '../../firebase/config';
 import TopBar from '../../components/TopBar';
 import UserAvatar from '../../components/UserAvatar';
 import Icon from '../../components/Icon';
-import { formatCoins } from '../../utils/helpers';
-
-const DEMO_USERS = [
-  { uid: '1', username: 'PixelQueen', displayName: 'Sarah Chen', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=PixelQueen', followers: 38000, isVerified: true, tier: 'Diamond', isFollowing: true },
-  { uid: '2', username: 'Shroud', displayName: 'Shroud', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Shroud', followers: 62000, isVerified: true, tier: 'Diamond', isFollowing: false },
-  { uid: '3', username: 'FragMaster', displayName: 'Jake Torres', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=FragMaster', followers: 5400, isVerified: false, tier: 'Silver', isFollowing: true },
-  { uid: '4', username: 'LootGoblin', displayName: 'Maya Kim', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=LootGoblin', followers: 8900, isVerified: false, tier: 'Platinum', isFollowing: true },
-  { uid: '5', username: 'ArcticWolf', displayName: 'Leo Frost', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ArcticWolf', followers: 2300, isVerified: false, tier: 'Gold', isFollowing: false },
-  { uid: '6', username: 'VoidRunner', displayName: 'Zara Void', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=VoidRunner', followers: 1100, isVerified: false, tier: 'Bronze', isFollowing: false },
-];
 
 export default function FollowListScreen() {
-  const { tab } = useParams();
-  const [activeTab, setActiveTab] = useState(tab || 'followers');
-  const [users, setUsers] = useState(DEMO_USERS);
-  const [search, setSearch] = useState('');
+  const { uid, type } = useParams(); // type is 'followers' or 'following'
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
-  const toggleFollow = (uid) => {
-    setUsers(prev => prev.map(u => u.uid === uid ? { ...u, isFollowing: !u.isFollowing } : u));
-  };
+  useEffect(() => {
+    const fetchList = async () => {
+      setLoading(true);
+      try {
+        const userDoc = await getDoc(doc(db, 'users', uid));
+        if (!userDoc.exists()) return;
 
-  const filtered = users.filter(u =>
-    u.username.toLowerCase().includes(search.toLowerCase()) ||
-    u.displayName.toLowerCase().includes(search.toLowerCase())
-  );
+        const ids = type === 'followers' 
+          ? userDoc.data().followerIds || [] 
+          : userDoc.data().followingIds || [];
+
+        if (ids.length === 0) {
+          setUsers([]);
+          return;
+        }
+
+        // Fetch user details for all IDs in the list
+        const q = query(collection(db, 'users'), where('__name__', 'in', ids.slice(0, 10)));
+        const snap = await getDocs(q);
+        setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchList();
+  }, [uid, type]);
 
   return (
-    <div className="screen-container min-h-screen pb-8">
-      <TopBar title={activeTab === 'followers' ? 'Followers' : 'Following'} showBack />
-
-      {/* Tabs */}
-      <div className="flex px-4 border-b border-border-accent/50">
-        {['followers', 'following'].map(t => (
-          <button key={t} onClick={() => setActiveTab(t)}
-            className={`relative flex-1 py-3 text-sm font-syne font-semibold text-center capitalize transition-colors ${
-              activeTab === t ? 'text-text-primary' : 'text-text-muted'
-            }`}>
-            {t}
-            {activeTab === t && <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 bg-brand-gradient rounded-full" />}
-          </button>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="px-4 py-3">
-        <label className="block relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
-            <Icon name="search" size={20} />
-          </div>
-          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-            className="w-full bg-surface-2 border border-border-accent rounded-full py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-cyan focus:outline-none" />
-        </label>
-      </div>
-
-      {/* List */}
+    <div className="screen-container min-h-screen">
+      <TopBar title={type === 'followers' ? 'Followers' : 'Following'} showBack />
+      
       <div className="divide-y divide-border-accent/20">
-        {filtered.map(user => (
-          <div key={user.uid} className="flex items-center gap-3 px-4 py-3">
-            <UserAvatar src={user.avatar} size={48} tier={user.tier} isVerified={user.isVerified} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-sm truncate">{user.displayName}</span>
-                {user.isVerified && (
-                  <span className="w-4 h-4 rounded-full bg-brand-cyan flex items-center justify-center shrink-0">
-                    <Icon name="check" size={10} className="text-bg-dark" />
-                  </span>
-                )}
+        {loading ? (
+          <div className="p-10 text-center text-text-muted text-sm">Loading users...</div>
+        ) : users.length > 0 ? (
+          users.map(user => (
+            <div key={user.uid} onClick={() => navigate(`/user/${user.username}`)} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-surface-1/50">
+              <UserAvatar src={user.avatar} size={48} tier={user.verificationTier} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-sm truncate text-text-primary">{user.displayName}</span>
+                </div>
+                <p className="text-text-muted text-xs">@{user.username}</p>
               </div>
-              <p className="text-text-muted text-xs">@{user.username} · {formatCoins(user.followers)} followers</p>
+              <Icon name="chevron_right" size={20} className="text-text-muted" />
             </div>
-            <button onClick={() => toggleFollow(user.uid)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                user.isFollowing ? 'bg-surface-2 border border-border-accent text-text-secondary' : 'bg-brand-cyan text-bg-dark'
-              }`}>
-              {user.isFollowing ? 'Following' : 'Follow'}
-            </button>
-          </div>
-        ))}
+          ))
+        ) : (
+          <div className="py-20 text-center text-text-secondary">No {type} yet.</div>
+        )}
       </div>
     </div>
   );

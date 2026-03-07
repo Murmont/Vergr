@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserAvatar from './UserAvatar';
 import Icon from './Icon';
+import PollCard from './PollCard'; // Integration: Import component
 import { timeAgo, formatCoins } from '../utils/helpers';
 
 export default function PostCard({ post, onLike, onComment, onShare }) {
@@ -44,10 +45,12 @@ export default function PostCard({ post, onLike, onComment, onShare }) {
             <span className="text-text-muted text-sm">@{post.author?.username}</span>
             <span className="text-text-muted text-xs">· {timeAgo(post.createdAt)}</span>
           </div>
+
           {/* Content */}
           <p className="text-text-primary text-[15px] leading-relaxed mt-1.5 whitespace-pre-wrap">
             {post.content}
           </p>
+
           {/* Media */}
           {post.mediaUrls?.length > 0 && (
             <div className="mt-3 rounded-2xl overflow-hidden border border-border-accent/30">
@@ -59,27 +62,34 @@ export default function PostCard({ post, onLike, onComment, onShare }) {
               />
             </div>
           )}
-          {/* Poll */}
-          {post.type === 'poll' && post.pollOptions && (
-            <div className="mt-3 space-y-2">
-              {post.pollOptions.map(opt => (
-                <button
-                  key={opt.id}
-                  className="w-full relative overflow-hidden rounded-xl border border-border-accent bg-surface-2 p-3 text-left transition-all hover:border-brand-cyan/30"
-                >
-                  <div
-                    className="absolute inset-y-0 left-0 bg-brand-cyan/10 rounded-xl transition-all duration-500"
-                    style={{ width: `${opt.percentage}%` }}
-                  />
-                  <div className="relative flex items-center justify-between">
-                    <span className="text-sm text-text-primary">{opt.text}</span>
-                    <span className="text-xs font-dmmono text-brand-cyan">{opt.percentage}%</span>
-                  </div>
-                </button>
-              ))}
-              <p className="text-xs text-text-muted mt-1">{formatCoins(post.totalVotes)} votes</p>
-            </div>
+
+          {/* Poll Integration */}
+          {post.type === 'poll' ? (
+            <PollCard post={post} />
+          ) : (
+             // Fallback for original poll structure if any (if you prefer keeping the old way as well)
+             post.type === 'poll' && post.pollOptions && (
+              <div className="mt-3 space-y-2">
+                {post.pollOptions.map(opt => (
+                  <button
+                    key={opt.id}
+                    className="w-full relative overflow-hidden rounded-xl border border-border-accent bg-surface-2 p-3 text-left transition-all hover:border-brand-cyan/30"
+                  >
+                    <div
+                      className="absolute inset-y-0 left-0 bg-brand-cyan/10 rounded-xl transition-all duration-500"
+                      style={{ width: `${opt.percentage}%` }}
+                    />
+                    <div className="relative flex items-center justify-between">
+                      <span className="text-sm text-text-primary">{opt.text}</span>
+                      <span className="text-xs font-dmmono text-brand-cyan">{opt.percentage}%</span>
+                    </div>
+                  </button>
+                ))}
+                <p className="text-xs text-text-muted mt-1">{formatCoins(post.totalVotes)} votes</p>
+              </div>
+            )
           )}
+
           {/* Exclusive / Locked Content */}
           {post.type === 'exclusive' && post.locked && (
             <div className="mt-3 bg-surface-2 border border-border-accent/30 rounded-2xl p-4">
@@ -103,6 +113,7 @@ export default function PostCard({ post, onLike, onComment, onShare }) {
               <p className="text-text-primary text-[15px] leading-relaxed">{post.exclusiveContent}</p>
             </div>
           )}
+
           {/* Tags */}
           {post.tags?.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -111,6 +122,7 @@ export default function PostCard({ post, onLike, onComment, onShare }) {
               ))}
             </div>
           )}
+
           {/* Actions */}
           <div className="flex items-center justify-between mt-3 -ml-2">
             <button

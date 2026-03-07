@@ -306,9 +306,11 @@ export default function AppRouter() {
                 {/* Settings */}
                 <Route path="/settings" element={<P><SettingsScreen /></P>} />
                 <Route path="/settings/privacy" element={<P><PrivacySettingsScreen /></P>} />
-                <Route path="/settings/security" element={<P><SecuritySettingsScreen /></P>} />
                 <Route path="/settings/linked-accounts" element={<P><LinkedAccountsScreen /></P>} />
                 <Route path="/settings/notifications" element={<P><NotificationSettingsScreen /></P>} />
+                <Route path="/settings/about" element={<P><AboutScreen /></P>} />
+                {/* Settings (new) */}
+                <Route path="/settings/security" element={<P><SecuritySettingsScreen /></P>} />
                 <Route path="/settings/language" element={<P><LanguageSettingsScreen /></P>} />
                 <Route path="/settings/display" element={<P><DisplaySettingsScreen /></P>} />
                 <Route path="/settings/permissions" element={<P><AppPermissionsScreen /></P>} />
@@ -319,19 +321,30 @@ export default function AppRouter() {
                 <Route path="/settings/disconnect/:platform" element={<P><DisconnectAccountScreen /></P>} />
                 <Route path="/settings/help" element={<P><HelpCenterScreen /></P>} />
                 <Route path="/settings/privacy-policy" element={<P><PrivacyPolicyScreen /></P>} />
-                <Route path="/settings/about" element={<P><AboutScreen /></P>} />
-                <Route path="/activity" element={<P><ActivityLogScreen /></P>} />
 
-                {/* Utility */}
+                {/* Brand (new) */}
+                <Route path="/brand/add-product" element={<P><AddProductScreen /></P>} />
+                <Route path="/brand/inventory" element={<P><InventoryScreen /></P>} />
+                <Route path="/brand/sales" element={<P><SalesAnalyticsScreen /></P>} />
+
+                {/* Search (new) */}
+                <Route path="/search" element={<P><SearchResultsAllScreen /></P>} />
+                <Route path="/search/streams" element={<P><SearchResultsStreamsScreen /></P>} />
+                <Route path="/search/empty" element={<P><NoSearchResultsScreen /></P>} />
+
+                {/* Utility (new) */}
                 <Route path="/maintenance" element={<MaintenanceScreen />} />
                 <Route path="/update-required" element={<ForceUpdateScreen />} />
                 <Route path="/offline" element={<NetworkErrorScreen />} />
+                <Route path="/activity" element={<P><ActivityLogScreen /></P>} />
 
+                {/* Tournaments (final batch) */}
                 <Route path="/team/:teamId/manage" element={<P><TeamManagementScreen /></P>} />
                 <Route path="/team/:teamId/funding" element={<P><TeamFundingScreen /></P>} />
                 <Route path="/team-contribute" element={<P><ContributeScreen /></P>} />
                 <Route path="/contribution-success" element={<P><ContributionSuccessScreen /></P>} />
                 <Route path="/prize-receipt/:prizeId" element={<P><PrizeReceiptScreen /></P>} />
+
                 {/* Catch-all */}
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
